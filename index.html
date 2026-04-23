@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ごろりんぴっく 出欠管理</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+
+  :root {
+    --ink: #1a1208;
+    --paper: #f5f0e8;
+    --tatami: #8b7355;
+    --accent: #c0392b;
+    --light: #ede8dc;
+    --border: #c8b89a;
+    --green: #27ae60;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(139,115,85,0.04) 40px, rgba(139,115,85,0.04) 41px),
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(139,115,85,0.04) 40px, rgba(139,115,85,0.04) 41px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 0 16px 80px; }
+
+  header {
+    text-align: center;
+    padding: 32px 0 20px;
+    border-bottom: 2px solid var(--tatami);
+    margin-bottom: 28px;
+  }
+  .dojo-kamon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .dojo-name {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+  }
+  .dojo-sub {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--tatami);
+    margin-top: 5px;
+  }
+
+  .tabs {
+    display: flex;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 12px;
+    background: var(--light);
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--tatami);
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--ink); color: var(--paper); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 2px 2px 0 rgba(139,115,85,0.1);
+  }
+  .card-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 14px;
+    font-weight: 700;
+    border-left: 3px solid var(--accent);
+    padding-left: 10px;
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+
+  label { font-size: 12px; color: var(--tatami); display: block; margin-bottom: 4px; letter-spacing: 0.05em; }
+  input[type=text], input[type=password] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    background: var(--paper);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+  input:focus { outline: none; border-color: var(--tatami); }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #2d2010; }
+  .btn-danger { background: var(--accent); color: #fff; }
+  .btn-sm { width: auto; display: inline-block; padding: 5px 14px; font-size: 12px; }
+
+  .child-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .child-item:last-child { border-bottom: none; }
+  .child-name { font-size: 14px; font-weight: 500; }
+  .child-sub { font-size: 11px; color: var(--tatami); margin-top: 2px; }
+
+  .schedule-block {
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .schedule-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 16px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .deadline-text { font-size: 11px; font-weight: 300; color: #b0a090; }
+  .member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: white;
+  }
+  .member-row:last-child { border-bottom: none; }
+  .member-name { font-size: 14px; }
+  .status-btns { display: flex; gap: 8px; }
+  .status-btn {
+    padding: 6px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    background: white;
+    color: var(--tatami);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .status-btn.attend.on { background: var(--green); border-color: var(--green); color: white; }
+  .status-btn.absent.on { background: var(--accent); border-color: var(--accent); color: white; }
+
+  .session-card {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .session-head {
+    background: var(--tatami);
+    color: white;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .session-date { font-family: 'Noto Serif JP', serif; font-size: 15px; font-weight: 700; }
+  .count-badge {
+    background: white;
+    color: var(--tatami);
+    border-radius: 20px;
+    padding: 2px 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .attendee-list { list-style: none; }
+  .attendee-item {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .attendee-item:last-child { border-bottom: none; }
+  .mark-attend { color: var(--green); font-weight: 700; }
+  .mark-absent { color: var(--accent); }
+  .mark-pending { color: var(--tatami); font-size: 12px; }
+
+  .msg { padding: 10px 14px; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
+  .msg-ok { background: #eafaf1; border: 1px solid #a9dfbf; color: #1e8449; }
+  .msg-err { background: #fdedec; border: 1px solid #f5b7b1; color: #922b21; }
+
+  .section-note { font-size: 12px; color: var(--tatami); margin-bottom: 14px; line-height: 1.6; }
+  .empty { text-align: center; color: var(--tatami); font-size: 13px; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="dojo-kamon">🥋</div>
+    <div class="dojo-name">ごろりんぴっく</div>
+    <div class="dojo-sub">出欠管理システム</div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-parent" onclick="switchTab('parent')">保護者</button>
+    <button class="tab-btn" id="tab-staff" onclick="switchTab('staff')">スタッフ</button>
+  </div>
+
+  <!-- ===== 保護者画面 ===== -->
+  <div id="view-parent" class="view active">
+
+    <div class="card">
+      <div class="card-title">お子さんを登録する</div>
+      <div id="msg-child"></div>
+      <label>お子さんの名前</label>
+      <input type="text" id="child-name-input" placeholder="例：山田 太郎">
+      <label>保護者のお名前</label>
+      <input type="text" id="parent-name-input" placeholder="例：山田 花子">
+      <button class="btn btn-primary" onclick="registerChild()">登録する</button>
+    </div>
+
+    <div class="card" id="my-children-card" style="display:none">
+      <div class="card-title">登録済みのお子さん</div>
+      <div id="my-children-list"></div>
+    </div>
+
+    <div class="card" id="attendance-card" style="display:none">
+      <div class="card-title">出欠を申告する</div>
+      <p class="section-note">参加できる日に「出席」、お休みの日に「欠席」を押してください。もう一度押すと取り消せます。</p>
+      <div id="schedule-list"></div>
+    </div>
+
+  </div>
+
+  <!-- ===== スタッフ画面 ===== -->
+  <div id="view-staff" class="view">
+
+    <div class="card" id="staff-login-card">
+      <div class="card-title">スタッフログイン</div>
+      <div id="msg-login"></div>
+      <label>パスワード</label>
+      <input type="password" id="staff-pw" placeholder="スタッフ用パスワード">
+      <button class="btn btn-primary" onclick="staffLogin()">ログイン</button>
+      <p style="font-size:11px;color:var(--tatami);margin-top:10px;text-align:center">初期パスワード：judo2024</p>
+    </div>
+
+    <div id="staff-panel" style="display:none">
+
+      <div class="card">
+        <div class="card-title">教室の日程を追加する</div>
+        <label>日付</label>
+        <input type="text" id="new-session-date" placeholder="例：6月15日（土）">
+        <label>申告締切</label>
+        <input type="text" id="new-session-deadline" placeholder="例：前日20:00まで">
+        <button class="btn btn-primary" onclick="addSession()">追加する</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">参加状況</div>
+        <div id="staff-sessions"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">登録メンバー一覧</div>
+        <div id="staff-members"></div>
+      </div>
+
+      <button class="btn btn-danger btn-sm" style="margin-top:4px" onclick="staffLogout()">ログアウト</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== ストレージ =====
+function load(key) {
+  try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+}
+function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function getChildren() { return load('judo_children') || []; }
+function getSessions() { return load('judo_sessions') || []; }
+function getAttendance() { return load('judo_attendance') || {}; }
+
+// ===== タブ =====
+function switchTab(tab) {
+  ['parent','staff'].forEach(t => {
+    document.getElementById('view-' + t).classList.toggle('active', t === tab);
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'parent') renderParent();
+  if (tab === 'staff' && load('judo_staff_in')) showStaffPanel();
+}
+
+// ===== 保護者：登録 =====
+function registerChild() {
+  const name = document.getElementById('child-name-input').value.trim();
+  const parent = document.getElementById('parent-name-input').value.trim();
+  const msg = document.getElementById('msg-child');
+  if (!name || !parent) { msg.innerHTML = '<div class="msg msg-err">お名前を入力してください</div>'; return; }
+  const children = getChildren();
+  if (children.find(c => c.name === name)) { msg.innerHTML = '<div class="msg msg-err">同じ名前がすでに登録されています</div>'; return; }
+  children.push({ id: Date.now().toString(), name, parent });
+  save('judo_children', children);
+  document.getElementById('child-name-input').value = '';
+  document.getElementById('parent-name-input').value = '';
+  msg.innerHTML = '<div class="msg msg-ok">✓ 登録しました</div>';
+  setTimeout(() => msg.innerHTML = '', 3000);
+  renderParent();
+}
+
+function removeChild(id) {
+  if (!confirm('削除しますか？')) return;
+  save('judo_children', getChildren().filter(c => c.id !== id));
+  renderParent();
+}
+
+// ===== 保護者：出欠 =====
+function setStatus(sessionId, childId, status, btn) {
+  const att = getAttendance();
+  const key = sessionId + '_' + childId;
+  if (att[key] === status) {
+    delete att[key];
+    btn.classList.remove('on');
+  } else {
+    att[key] = status;
+    btn.closest('.member-row').querySelectorAll('.status-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+  }
+  save('judo_attendance', att);
+}
+
+// ===== 保護者：描画 =====
+function renderParent() {
+  const children = getChildren();
+  const sessions = getSessions();
+  const att = getAttendance();
+
+  const childCard = document.getElementById('my-children-card');
+  const childList = document.getElementById('my-children-list');
+  if (children.length === 0) {
+    childCard.style.display = 'none';
+  } else {
+    childCard.style.display = 'block';
+    childList.innerHTML = children.map(c => `
+      <div class="child-item">
+        <div>
+          <div class="child-name">${c.name}</div>
+          <div class="child-sub">保護者：${c.parent}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeChild('${c.id}')">削除</button>
+      </div>`).join('');
+  }
+
+  const attCard = document.getElementById('attendance-card');
+  const schedList = document.getElementById('schedule-list');
+  if (sessions.length === 0 || children.length === 0) {
+    attCard.style.display = 'none';
+  } else {
+    attCard.style.display = 'block';
+    schedList.innerHTML = sessions.map(s => {
+      const rows = children.map(c => {
+        const key = s.id + '_' + c.id;
+        const st = att[key] || '';
+        return `<div class="member-row">
+          <span class="member-name">${c.name}</span>
+          <div class="status-btns">
+            <button class="status-btn attend ${st==='attend'?'on':''}" onclick="setStatus('${s.id}','${c.id}','attend',this)">出席</button>
+            <button class="status-btn absent ${st==='absent'?'on':''}" onclick="setStatus('${s.id}','${c.id}','absent',this)">欠席</button>
+          </div>
+        </div>`;
+      }).join('');
+      return `<div class="schedule-block">
+        <div class="schedule-header">
+          <span>${s.date}</span>
+          <span class="deadline-text">締切：${s.deadline}</span>
+        </div>
+        ${rows}
+      </div>`;
+    }).join('');
+  }
+}
+
+// ===== スタッフ：ログイン =====
+const PW = 'judo2024';
+function staffLogin() {
+  const pw = document.getElementById('staff-pw').value;
+  if (pw === PW) {
+    save('judo_staff_in', true);
+    showStaffPanel();
+  } else {
+    document.getElementById('msg-login').innerHTML = '<div class="msg msg-err">パスワードが違います</div>';
+  }
+}
+function staffLogout() {
+  save('judo_staff_in', false);
+  document.getElementById('staff-login-card').style.display = 'block';
+  document.getElementById('staff-panel').style.display = 'none';
+  document.getElementById('staff-pw').value = '';
+}
+function showStaffPanel() {
+  document.getElementById('staff-login-card').style.display = 'none';
+  document.getElementById('staff-panel').style.display = 'block';
+  renderStaffPanel();
+}
+
+// ===== スタッフ：日程追加 =====
+function addSession() {
+  const date = document.getElementById('new-session-date').value.trim();
+  const deadline = document.getElementById('new-session-deadline').value.trim();
+  if (!date) { alert('日付を入力してください'); return; }
+  const sessions = getSessions();
+  sessions.push({ id: Date.now().toString(), date, deadline: deadline || '前日まで' });
+  save('judo_sessions', sessions);
+  document.getElementById('new-session-date').value = '';
+  document.getElementById('new-session-deadline').value = '';
+  renderStaffPanel();
+}
+
+function removeSession(id) {
+  if (!confirm('この日程を削除しますか？')) return;
+  save('judo_sessions', getSessions().filter(s => s.id !== id));
+  renderStaffPanel();
+}
+
+// ===== スタッフ：描画 =====
+function renderStaffPanel() {
+  const sessions = getSessions();
+  const children = getChildren();
+  const att = getAttendance();
+
+  const sessDiv = document.getElementById('staff-sessions');
+  if (sessions.length === 0) {
+    sessDiv.innerHTML = '<div class="empty">日程がまだありません</div>';
+  } else {
+    sessDiv.innerHTML = sessions.map(s => {
+      const rows = children.length === 0
+        ? '<li class="attendee-item"><span class="mark-pending">メンバー未登録</span></li>'
+        : children.map(c => {
+            const key = s.id + '_' + c.id;
+            const st = att[key];
+            let cls = 'mark-pending', label = '未回答';
+            if (st === 'attend') { cls = 'mark-attend'; label = '◯ 出席'; }
+            if (st === 'absent') { cls = 'mark-absent'; label = '✕ 欠席'; }
+            return `<li class="attendee-item"><span>${c.name}</span><span class="${cls}">${label}</span></li>`;
+          }).join('');
+      const cnt = children.filter(c => att[s.id + '_' + c.id] === 'attend').length;
+      return `<div class="session-card">
+        <div class="session-head">
+          <span class="session-date">${s.date}</span>
+          <span class="count-badge">出席 ${cnt}人</span>
+        </div>
+        <ul class="attendee-list">${rows}</ul>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);background:#fafaf8">
+          <button class="btn btn-danger btn-sm" onclick="removeSession('${s.id}')">この日程を削除</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  const memDiv = document.getElementById('staff-members');
+  if (children.length === 0) {
+    memDiv.innerHTML = '<div class="empty">まだ登録がありません</div>';
+  } else {
+    memDiv.innerHTML = children.map(c => `
+      <div class="child-item">
+        <div>
+          <div class="child-name">${c.name}</div>
+          <div class="child-sub">保護者：${c.parent}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ===== 初期化 =====
+window.onload = () => {
+  renderParent();
+  if (load('judo_staff_in')) showStaffPanel();
+};
+</script>
+</body>
+</html>
